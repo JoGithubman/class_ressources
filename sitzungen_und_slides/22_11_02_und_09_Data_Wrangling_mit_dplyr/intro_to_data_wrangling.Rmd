@@ -251,6 +251,15 @@ deadly_cops %>%
 
 - In welchem Bundesland gab es die meisten tödlichen Polizeischüsse in den 1990er Jahren und in welchem in den 2000ern?
 
+```{r}
+deadly_cops%>%
+  select(Datum, Bundesland)%>%
+  group_by(Bundesland)%>%
+  filter(Datum >= "1990-01-01", Datum <= "1999-12-31")%>%
+  summarise(faelle_pro_bundesland = n())%>%
+  arrange(desc(faelle_pro_bundesland))%>%
+```
+
 ## Zeitliche Entwicklung 
 
 Oft kann es interessant sein, stetige Variablen (wie Zeit) in Kategorien einzuteilen (wie Jahrzehnte). 
@@ -271,7 +280,7 @@ deadly_cops %>%
   summarise(Anzahl_Faelle = n())
 ```
 
-## Case when 
+## Case when - bei mehreren Konditionen
 
 ```{r}
 # case_when(condition == 1 ~ "Kondition 1", 
@@ -281,13 +290,14 @@ deadly_cops %>%
 
 ```{r}
 cops_datum <- deadly_cops %>%
-  select(Datum, Alter) %>%
+  select(Datum) %>%
   mutate(Datum_aggregiert = case_when(Datum > "2020-01-01" ~ "2020er", 
                                       Datum > "2010-01-01" ~ "2010er", 
                                       Datum > "2000-01-01" ~ "2000er", 
                                       Datum > "1990-01-01" ~ "1990er", 
                                       Datum > "1980-01-01" ~ "1980er", 
-                                      Datum > "1970-01-01" ~ "1970er"
+                                      TRUE ~ "1970er"
+                                      #alles, was nicht abgedeckt wurde kann durch "TRUE" ausgewählt werden
                                       )
   ) %>%
   group_by(Datum_aggregiert) %>%
@@ -395,6 +405,12 @@ df_cops_psych_2 <- df_cops_psych %>%
 ### Aufgabe 
 
 Nutze df_cops_psych_2 und berechne die prozentzahl an Hinweisen auf psychische Ausnahmefälle pro Jahrzehnt. 
+
+```{r}
+df_cops_psych_2 %>%
+  
+```
+
 
 ```{r}
 library(ggplot2)
