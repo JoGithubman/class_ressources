@@ -1,0 +1,513 @@
+---
+title: "Data Visualization with ggplot2 - Der Berliner Mietmarkt"
+author: "Moritz Valentino Donatello Matzner"
+date: "Today"
+output:
+  beamer_presentation:
+    theme: default
+ #   fonttheme: structurebold
+    slide_level: 2
+  ioslides_presentation: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = F, warning = F, error = F)
+```
+
+# Setting up Our Script and Glimpsing at the Data
+
+## Importing and Loading
+
+-   Import and load libraries
+
+```{r warning = FALSE}
+#install.packages("ggplot2") # used for plotting 
+#install.packages("dplyr") # used for data wrangling
+#install.packages("sf") # for spatial data
+library(ggplot2)
+library(dplyr)
+library(sf)
+```
+
+
+# The Grammar of Graphics
+
+-   ggplot basiert auf der *Grammar of Graphics* von Leland Wilkinsonn (1999).
+-   Und hat verschiedene Ebenen: data, mapping, statistics, scales, geometries, facets, coordinates, themes
+
+## Data
+
+- Die erste Ebene ist "Daten". Diese definiert, was die Datenbasis des Plots ist. 
+
+```{r}
+#install.packages("palmerpenguins")
+library(palmerpenguins)
+penguins
+glimpse(penguins)
+```
+
+
+## *mapping = aesthetics mapping*
+-   Aufbauend auf der Datenbasis müssen wir nun entscheiden, was für Daten herausgegriffen werden sollen, um gemappt zu werden. 
+-   Aes verbindet Variablen in den Daten mit graphical properties in der Geometry
+-   Und definiert, welche Variablen aus dem Datensatz herausgegriffen werden sollen um geplottet zu werden. 
+
+***
+```{r, , out.width="75%"}
+names(penguins)
+
+ggplot(data=penguins, 
+       mapping = aes(x=`flipper_length_mm`, y=`body_mass_g`))
+
+summary(penguins)
+```
+
+## *geometries*
+- Diese Daten müssen nun graphisch interpretiert werden - und zwar durch die Geometrien oder *geoms*
+
+***
+
+```{r}
+ggplot(data=penguins, 
+       mapping = aes(x=`flipper_length_mm`, 
+                     y=`body_mass_g`)) +
+geom_point()
+```
+
+## themes 
+
+```{r}
+library(ggthemes)
+
+themes <- ggplot(data=penguins, 
+       mapping = aes(x=`flipper_length_mm`, y=`body_mass_g`)) +
+geom_point()
+
+themes +
+  theme_bw()
+
+themes +
+  theme_classic()
+
+themes +
+  theme_economist() 
+
+themes +
+  theme_fivethirtyeight() 
+
+themes +
+  theme_minimal()
+```
+
+### Aufgabe
+
+- Lade das Datenset *immo* 
+- Suche dir zwei Variablen und mache einen Scatterplot indem du *geom_point* nutzt
+
+```{r}
+library(readr)
+immo <- read_delim("/Users/moru/Documents/08_git_repos/class_mardown/data/berlin_rental_market/immoscout.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+```
+
+
+## Mapping 
+
+Wenn wir eine Geometrie für alle Datenpunkte ändern wollen schreiben wir die Argumente einfach in die Funktion. Beispiele sind die Farbe oder Größe der Geometrien. 
+
+```{r}
+ggplot(data=penguins, 
+       mapping = aes(x=flipper_length_mm, 
+                     y=body_mass_g)) +
+  geom_point(color="red", 
+             size=0.5)
+```
+
+Falls wir - bsw. die Farbe - einer Geometrie abhängig von den Ausprägungen einer Variablen ändern wollen, schreiben wir das Argument in aesthetics
+
+```{r}
+ggplot(data=penguins, 
+       mapping = aes(x=flipper_length_mm, 
+                     y=body_mass_g, 
+                     color=island)) + 
+  geom_point()
+```
+
+Ein weiterer oft genutzes geom ist geom_line. Damit können wir zB eine Entwicklung über Zeit abbilden  
+```{r}
+library(readr)
+polizeischuesse <- read_csv("data/deadly_cops/polizeischuesse.csv")
+
+deadly_cops <- polizeischuesse
+
+deadly_cops_jahr <- deadly_cops %>%
+  mutate(Jahr = format(as.Date(Datum, "%Y-%m-%d"), "%Y")) %>%
+  group_by(Jahr) %>%
+  summarise(anzahl_jahr = n())
+
+ggplot(deadly_cops_jahr, aes(x=Jahr, y=anzahl_jahr, group=1)) +
+  geom_point() +
+  geom_line() +
+  theme_bw()
+```
+
+### Aufgabe
+- Wann wurden die angebotenen Wohnungen gebaut? Findest du die Variable, welches das Baujahr der angebotenen Wohnung angibt? Nutze dplyr um einen neuen Datensatz zu soeichern, der die Anzahl von Wohnungen pro Bauhjahr angibt. Plotte diesen Datensatz mit ggplot und geom_line() 
+
+### Aufgabe 
+Gehe zurück zu deinem Scatterplot - 
+- Nutze das argument *color* um eine dritte Dimension aus den Daten zu mappen.
+- Füge außerdem *geom_smooth* als weitere Geometrie neben *geom_point* hinzu
+- Falls es zu viele Daten sind, nutzte das Argument *size* um alle Datenpunkte zu verkleinern und das Argument *alpha* um die Deckkraft zu veringern. 
+
+##  *statistics*
+- Wir können die Daten auch innerhalb von ggplot einer statistischen Transformation unterziehen.
+- Oft sind die statistischen Konversionen innerhalb der geoms implizit. Ein Beispiel ist geom_boxplot
+- Wie ist ein Boxplot zu interpretieren? 
++ in der box sind 50 prozent der daten, also zwei quartiles
++ die striche sind noch mal 25%
++ die punkte sind outlier
+
+```{r}
+ggplot(data = penguins) +
+  geom_boxplot(aes(y=body_mass_g))
+
+summary(penguins)
+
+ggplot(data = penguins) +
+  geom_boxplot(aes(x=island, 
+                   y=body_mass_g))
+```
+
+### Aufgabe 
+Mache einen Boxplot der eine logarythmische Transformation von "Rent" auf die y-Achse und die Variable "Vermieter_typ" auf die x-Achse mappt. 
+
+***
+
+- Teilweise sind die statistischen Transformationen welche durch die geoms aktiviert werden nicht explizit. 
+- Bei geom_bar zum Beispiel werden die observations nach der Ausprägung einer Variablen gruppiert und dann gezählt. 
+
+```{r}
+ggplot(penguins) +
+  geom_bar(aes(x=island))
+```
+
+### Aufgabe
+
+Finde heraus, wie viele Angebote in dem Datensatz welchem Vermietertyp zuzuordnen sind. Berechne die Anzahl mit dplyr 
+
+***
+
+
+## Histogram 
+
+- Ein oft genutzer Plot ist das Histogram 
+- Wie wird der interpretiert? 
+```{r}
+
+ggplot(data=penguins) +
+  geom_histogram(aes(x=flipper_length_mm))
+
+ggplot(data=penguins) +
+  geom_histogram(aes(x=flipper_length_mm), 
+                 bins = 10)
+
+
+ggplot(data=penguins) +
+  geom_histogram(aes(x=flipper_length_mm), 
+                 bins = 100)
+
+```
+
+Auch das Histogram können wir nach Gruppenzugehörigkeit mappen 
+
+```{r}
+                 
+# stacking 
+ggplot(data=penguins) +
+  geom_histogram(aes(x=flipper_length_mm, 
+                     fill=island), 
+                 position = "stack") +
+  theme_classic()
+
+# dodge
+ggplot(data=penguins) +
+  geom_histogram(aes(x=flipper_length_mm, 
+                     fill=island), 
+                 position = "dodge") +
+  theme_classic()
+```
+
+Eine Variation ist der Denisty Plot. Die Fläche unter der Kurve ist immer 1 
+```{r}
+ggplot(data=penguins) +
+  geom_density(aes(x=flipper_length_mm, fill=island))
+
+# mit reduziertem alpha
+ggplot(data=penguins) +
+  geom_density(aes(x=flipper_length_mm, fill=island), 
+               alpha=0.5)
+```
+
+
+### Aufgabe
+
+- Nutze *geom_density* um die relative verteilung von Angeboten nach Vermieter_typ zu plotten.
+- Reduziere die Transparenz bei allen Plots 
+- Schränke die Datenbasis ein und beziehe nur Angebote mit einem qm-Preis von unter 30€ ein. 
+
+
+## geom_jitter und statistische Transformation
+
+Eine weitere gute Visualisierungsmethode ist geom_jitter. Diese hilft dabei, wenn viele Datenpunkte sehr nah beieinander sind und wir categorical variables plotten (also wieder Unterschiede von Gruppenzugehörigkeiten)
+
+```{r}
+p_jitter <- ggplot(penguins, aes(x=island, 
+                  y=body_mass_g)) +
+  geom_jitter() +
+  stat_summary(fun = median, 
+               color = "blue")
+
+p_jitter
+```
+
+### Aufgabe
+
+- Mache einen neuen Plot mit der Geometrie *geom_jitter*. 
+- Füge mit *stat_summary* noch einen roten Punkt hinzu, welcher den Gruppenmedian denotiert.  
+
+## Jitter + violine
+- Der hitterpliot sagt uns aber wenig(er) darüber aus, wie Daten verteilt sind. 
+- Das wiederum geht sehr gut mit einem sogenannten Violinplot
+
+```{r , out.width="75%"}
+p_jitter + geom_violin(aes(color=island), alpha=0.5)
+```
+
+
+
+------------------------------------------------------------------------
+
+##   *scales*
+- Daten können unterschiedliche Strukturen haben: stetig, diskret, .. 
+- Variablen wie ```Vermieter_typ``` haben erstmal keine 
+- Scale übersetzt: von Kategorien zu Farben und von Nummern zu Positionen 
+- Alles in ```aes()``` hat eine Scale
+- scale goes like: "What is inside the aes?, what kind of variable do we have?" 
+--> If we use ```color``` for the categorical variable ```Vermieter_typ``` we will get a discrete color scale, not a continuous one!
+
+***
+```{r fig. }
+jitter_color <- 
+  ggplot(immo, 
+       aes(x=Vermieter_typ, 
+           y=log(Rent), 
+           color=Vermieter_typ
+           )
+       ) +
+  geom_jitter(width = 0.4,
+              size = 0.05,
+              alpha=0.5) +
+  stat_summary(fun = median, 
+               geom = "point", 
+               color= "DarkRed", 
+               size=2) +
+  theme_classic() +
+  theme(legend.position="none") 
+
+jitter_color
+```
+
+
+***
+
+## Colors  
+Wir können natürlich auch die Farben bestimmen, welche wir zum plotten nutzen  
+
+```{r}
+  jitter_color +
+  scale_color_brewer(type = "qual", 
+                     palette = "Set2") +
+  geom_violin(alpha=0.5)
+```
+
+***
+
+
+```{r, out.width="75%"}
+density +
+  scale_fill_brewer(type = "qual", 
+                     palette = "Set1") 
+```
+
+## *facets*
+- Jeder Plot hat eine plotting area 
+- und durch "facets" können wir multiple plotting areas generieren 
+
+
+***
+```{r, out.width="75%"}
+
+  ggplot(data = immo) +
+  geom_density(aes(x=log(Rent), 
+                   fill=Vermieter_typ), 
+               alpha=0.5
+               )+
+  facet_grid(rows=vars(Vermieter_typ))+
+  theme_classic() +
+  scale_fill_brewer(type = "qual", 
+                     palette = "Set1") +
+  theme(legend.position="none") # removes the legend
+```
+
+
+***
+
+## Coordinates
+- A physical mapping of the mapping= aesthetics in a coordinate system
+- That is why we can easily plot maps and georeferenced data!
+
+```{r echo=F}
+plot_wrong <- ggplot(immo) +
+  geom_point(mapping= aes(x=lat, y=lng, color=Vermieter_typ)) +
+  theme_classic() 
+
+plot_wrong
+```
+
+***
+- We can do changes on two fronts: filter the data or define the limits of the coordinate system without changing the underlying data! 
+```{r , out.width="25%"}
+# we can filter the data 
+ggplot(subset(immo, lng>12)) +
+  geom_point(mapping= aes(x=lat, y=lng, color=Vermieter_typ)) +
+  theme_classic() 
+
+# or 
+plot_wrong +
+  scale_y_continuous(limits=c(13, 13.8))+
+  scale_x_continuous(limits=c(52.35, 52.6))
+```
+
+
+***
+Was könnte sonst noch geändert werden?
+
+```{r}
+ggplot(immo_filtered) +
+  geom_point(mapping= aes(x=lat, 
+                          y=lng, 
+                          color=Vermieter_typ), 
+             size=0.1, 
+             # durch das alpha reduzieren wir die deckkraft der punkte
+             alpha=0.5) +
+  theme_classic() 
+```
+
+## Scales, colors and coordinates
+
+Bis jetzt haben wir nur diskrete, aber keine stetigen Variablen mit Farbe gemappt
+
+```{r , out.width="50%"}
+ggplot(data=immo_filtered) +
+  geom_point(aes(x=lat, 
+                 y=lng, 
+                 color=sqm_price),
+             size=0.3,
+             alpha=1) +
+  theme_classic()
+  
+```
+
+***
+## Color Palette 
+- Einige Farbkombination können nicht von allem Menschen gleich gut erkannt werden. 
+- Die Vidris Palette kann auch von bsw. Farbenblinden Menschen gut erkannt werden. 
+***
+```{r}
+ggplot(immo_filtered) +
+  geom_point(aes(x=lat, 
+                 y=lng, 
+                 color=sqm_price),
+             size=0.75) +
+  scale_color_viridis_b(limits=c(10, 30)) +
+  theme_classic()
+```
+
+
+
+***
+
+## Spatial Data
+```{r , message=T}
+# transform the data to a spatial system 
+immo_spatial <- immo_filtered %>%
+  filter(!is.na(lng) & !is.na(lat) & lng > 13)
+
+points <- st_as_sf(immo_spatial, 
+                   coords = c("lng", "lat"), 
+                   crs = 4326, agr = "constant")
+
+# load the berlin street data 
+streets_berlin <- st_read("~/Documents/08_git_repos/class_mardown/data/berlin_geometries/straßen_berlin/Straßenabschnitte.shp")
+
+ggplot() +
+  geom_sf(data=streets_berlin, 
+          size=0.1)
+
+ggplot() +
+  geom_sf(data=streets_berlin, 
+          size=0.1) +
+  geom_sf(data = points, 
+          size=0.3, 
+          alpha=0.75,
+          mapping= aes(color=Vermieter_typ)) +
+  theme_bw()
+```
+
+
+***
+
+#Color 
+Wir können zusätzlich noch einschränken, welche Werte gemappt werden. Das passiert durch das limits Argument in der Palette. 
+```{r}
+ggplot() +
+  geom_sf(data=streets_berlin, 
+          size=0.1) +
+  geom_sf(data = points, 
+          size=0.4, 
+          alpha=0.75,
+          mapping= aes(color=sqm_price)) +
+  scale_color_viridis_b(limits=c(10, 25)) +
+  theme_void()
+```
+
+
+***
+## Overplotting? 
+- Let's facet this plot by ```Vermieter_typ```
+
+```{r}
+ggplot() +
+  geom_sf(data=streets_berlin, 
+          size=0.1) +
+  geom_sf(data = points, 
+          mapping = aes(color=sqm_price), 
+          size=0.5) +
+  scale_color_viridis_b(limits=c(5, 20)) +
+  facet_wrap(~Vermieter_typ) +
+  theme_classic() +
+  theme(legend.position="none")
+
+```
+
+
+***
+
+## Key Take Aways :) 
+
+- Das Mapping findet innerhalb von aes() statt
+- Wir ändern das plotten durch die geoms - wir haben geom_point, geom_line und geom_sf kennengelernt 
+
+
+
